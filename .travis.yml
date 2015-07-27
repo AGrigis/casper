@@ -32,6 +32,6 @@ script:
 
 after_success:
     - cat .coverage | wc
-    - coveralls --verbose
+    - coveralls
 
 
