@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Clothing Pipeline Test
+    </docstring>
+    <units>
+        <unit name="slip">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="pantalon">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chemise">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="cravate">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="veste">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="ceinture">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chaussures">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chaussettes">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+    </units>
+    <links>
+        <link source="inp1" destination="slip.inp"/>
+        <link source="inp2" destination="chemise.inp"/>
+        <link source="inp3" destination="chaussettes.inp"/>
+        <link source="cravate.outp" destination="outp1"/>
+        <link source="veste.outp" destination="outp2"/>
+        <link source="chaussures.outp" destination="outp3"/>
+        <link source="slip.outp" destination="pantalon.inp"/>
+        <link source="chemise.outp" destination="pantalon.inp"/>
+        <link source="pantalon.outp" destination="ceinture.inp"/>
+        <link source="chemise.outp" destination="cravate.inp"/>
+        <link source="chemise.outp" destination="veste.inp"/>
+        <link source="pantalon.outp" destination="ceinture.inp"/>
+        <link source="ceinture.outp" destination="chaussures.inp"/>
+        <link source="chaussettes.outp" destination="chaussures.inp"/>
+    </links>
+</pipeline>

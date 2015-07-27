@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Iterative Pipeline Test
+    </docstring>
+    <units>
+        <unit name="slip">
+            <module>casper.demo.module.clothing_outputs</module>
+        </unit>
+        <unit name="chaussettes">
+            <module>casper.demo.module.clothing</module>
+            <iterinput name="inp"/>
+            <iteroutput name="outp"/>
+        </unit>
+        <unit name="chaussures">
+            <module>casper.demo.linear_2_pipeline.xml</module>
+            <iterinput name="inp"/>
+            <iteroutput name="outp"/>
+        </unit>
+        <unit name="pantalon">
+            <module>casper.demo.module.clothing_inputs</module>
+        </unit>
+    </units>
+    <links>
+        <link source="inp" destination="slip.inp"/>
+        <link source="pantalon.outp" destination="outp"/>
+        <link source="slip.listoutp" destination="chaussettes.iterinp"/>
+        <link source="chaussettes.iteroutp" destination="chaussures.iterinp"/>
+        <link source="chaussures.iteroutp" destination="pantalon.listinp"/>
+    </links>
+</pipeline>

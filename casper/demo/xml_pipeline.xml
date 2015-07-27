@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Pipeline Test
+    </docstring>
+    <units>
+        <unit name="p1">
+            <module>casper.demo.module.a_function_to_wrap</module>
+            <set name="fname" value="'/tmp'"/>
+        </unit>
+        <unit name="p2">
+            <module>casper.demo.pipeline.xml</module>
+        </unit>
+    </units>
+    <links>
+        <link source="p1.string" destination="p2.fname"/>
+        <link source="pdirectory" destination="p2.pdirectory"/>
+        <link source="pdirectory" destination="p1.directory"/>
+        <link source="fname" destination="p1.fname"/>
+        <link source="p2.outstring" destination="string"/>
+    </links>
+    <positions>
+        <position unit="inputs" x="0" y="0"/>
+        <position unit="p1" x="200" y="200"/>
+        <position unit="p2" x="400" y="-200"/>
+        <position unit="outputs" x="600" y="0"/>
+    </positions>
+    <zoom level="1"/> 
+</pipeline>

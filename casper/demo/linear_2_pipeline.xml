@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Linear Pipeline Test
+    </docstring>
+    <units>
+        <unit name="c1">
+            <module>casper.demo.linear_pipeline.xml</module>
+        </unit>
+    </units>
+    <links>
+        <link source="inp" destination="c1.inp"/>
+        <link source="c1.outp" destination="outp"/>
+    </links>
+</pipeline>

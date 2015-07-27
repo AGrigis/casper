@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Linear Pipeline Test
+    </docstring>
+    <units>
+        <unit name="c1">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="c2">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+    </units>
+    <links>
+        <link source="inp" destination="c1.inp"/>
+        <link source="c2.outp" destination="outp"/>
+        <link source="c1.outp" destination="c2.inp"/>
+    </links>
+</pipeline>

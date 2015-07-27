@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline version="1.0">
+    <docstring>
+        Auto Generated Switch Pipeline Test
+    </docstring>
+    <units>
+        <unit name="slip">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="pantalon">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="ceinture">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="short">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chemise">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="cravate">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="tshirt">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chaussettes">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <unit name="chaussures">
+            <module>casper.demo.module.clothing</module>
+        </unit>
+        <switch name="bas">
+            <path name="hiver">
+                <unit name="pantalon"/>
+                <unit name="ceinture"/>
+            </path>
+            <path name="ete">
+                <unit name="short"/>
+            </path>   
+        </switch>
+        <switch name="haut">
+            <path name="hiver">
+                <unit name="chemise"/>
+                <unit name="cravate"/>
+            </path>
+            <path name="ete">
+                <unit name="tshirt"/>
+            </path>
+        </switch>
+    </units>
+    <links>
+        <link source="inp" destination="slip.inp"/>
+        <link source="chaussures.outp" destination="outp"/>
+        <link source="slip.outp" destination="pantalon.inp"/>
+        <link source="slip.outp" destination="short.inp"/>
+        <link source="pantalon.outp" destination="ceinture.inp"/>
+        <link source="ceinture.outp" destination="chaussettes.inp"/>
+        <link source="short.outp" destination="chaussettes.inp"/>
+        <link source="chaussettes.outp" destination="chemise.inp"/>
+        <link source="chaussettes.outp" destination="tshirt.inp"/>
+        <link source="chemise.outp" destination="cravate.inp"/>
+        <link source="cravate.outp" destination="chaussures.inp"/>
+        <link source="tshirt.outp" destination="chaussures.inp"/>
+    </links>
+</pipeline>
