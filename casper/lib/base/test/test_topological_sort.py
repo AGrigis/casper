@@ -46,8 +46,13 @@ class TestGraph(unittest.TestCase):
         """ Method to test the raises.
         """
         self.assertRaises(Exception, self.graph.add_node, object())
+        self.assertEqual(self.graph.find_node("bad"), None)
+        self.assertRaises(Exception, self.graph.remove_node, "bad")
         self.assertRaises(ValueError, self.graph.add_node,
                           self.graph._nodes[self.objects[0]])
+        self.assertRaises(Exception, self.graph.add_link, "bad", "bad")
+        self.assertRaises(Exception, self.graph.add_link,
+                          self.sorted_objects[0], "bad")
 
     def test_static_sort(self):
         """ Method to test the static node sort.
@@ -77,6 +82,7 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(sorted(graph.layout().keys()), ["node1"])
         graph.add_node(GraphNode("node2", None))
         self.assertEqual(sorted(graph.layout().keys()), ["node1", "node2"])
+        self.assertTrue(set(self.graph.layout()).issubset(self.sorted_objects))
 
 
 def test():

@@ -93,30 +93,35 @@ class Ibox(object):
     # Public Members
     ###########################################################################
 
-    def update_iteroutputs(self, control_name, value, iteration):
-        """ Update the ibox iterative output control values.
+    def update_iteroutputs(self, iterboxes):
+        """ Update the ibox standard/iterative output control values.
 
         Parameters
         ----------
-        control_name: str
-        value: object
-        iteration: int
+        iterboxes: list of box (mandatory)
+            the executed iterative boxes used to update the ibox outputs.
         """
-        if control_name in self.iteroutputs:
-            control_name = self.iterprefix + control_name
-            itercontrol = getattr(self.outputs, control_name)
-            if itercontrol.value is None:
-                control_value = [None] * (iteration + 1)
-            elif len(itercontrol.value) <= iteration:
-                control_value = (
-                    itercontrol.value + [None] * (
-                        iteration + 1 - len(itercontrol.value)))
+        # Update all the ibox outputs
+        for control_name in self.outputs.controls:
+
+            # Get the non iterative control name and the iterative boxes
+            # outputs
+            control_name = control_name.replace(self.iterprefix, "")
+            itervalue = [
+                getattr(box.outputs, control_name).value for box in iterboxes]
+
+            # Update the ibox outputs: a standard ibox control is set only if
+            # all the iterative jobs have returned the same value
+            if control_name in self.iteroutputs:
+                itercontrol_name = self.iterprefix + control_name
+                setattr(self.outputs, itercontrol_name, itervalue)
             else:
-                control_value = itercontrol.value
-            control_value[iteration] = value
-        else:
-            control_value = value
-        setattr(self.outputs, control_name, control_value)
+                if all(value == itervalue[0] for value in itervalue):
+                    setattr(self.outputs, control_name, itervalue[0])
+                else:
+                    raise ValueError(
+                        "The '{0}' standard ibox output can't have different "
+                        "values {1}.".format(control_name, itervalue))
 
     def itergraphs(self, prefix=""):
         """ Create a list of iterative pipeline's graph representations.
@@ -129,7 +134,8 @@ class Ibox(object):
         Returns
         -------
         itergraphs: dictionary
-            the iterative pipeline's graph representations.
+            the iterative pipeline's graph representations. Each value is
+            a 2-uplet containing a graph and the corresponding bbox or pbox.
         """
         # Update the iterative pipeline only if all the input terative
         # controls have the same number of elements
@@ -178,7 +184,7 @@ class Ibox(object):
                 else:
                     itergraph, _, _ = self.iterbox._create_graph(
                         iterbox, prefix=node_name + ".", filter_inactive=True)
-                itergraphs[node_name] = itergraph
+                itergraphs[node_name] = (itergraph, iterbox)
 
         return itergraphs
 

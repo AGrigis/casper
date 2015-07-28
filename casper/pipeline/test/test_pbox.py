@@ -81,7 +81,7 @@ class TestPBox(unittest.TestCase):
         self.assertEqual(self.mypbox.inputs.inp3.value, "my_value_1")
 
         # Test execution
-        self.mypbox(timer=0.001)
+        self.mypbox()
         self.assertEqual(self.mypbox.outputs.outp1.value, "my_value_2")
         self.assertEqual(self.mypbox.outputs.outp2.value, "my_value_2")
         self.assertEqual(self.mypbox.outputs.outp3.value, "my_value_1")
@@ -126,7 +126,7 @@ class TestPBox(unittest.TestCase):
         self.assertEqual(self.mypbox.inputs.inp.value, "toto")
 
         # Test execution
-        self.mypbox(timer=0.001)
+        self.mypbox()
         self.assertEqual(self.mypbox.outputs.outp.value, "toto")
 
     def test_xml_pbox_switch(self):
@@ -150,7 +150,7 @@ class TestPBox(unittest.TestCase):
         self.assertFalse(self.mypbox._boxes["short"].active)
 
         # Test execution
-        self.mypbox(timer=0.001)
+        self.mypbox()
         self.assertEqual(
             self.mypbox._boxes["cravate"].outputs.outp.value, None)
         self.assertEqual(

@@ -15,7 +15,6 @@ try:
     import importlib
 except:
     pass
-import time
 import multiprocessing
 import logging
 
@@ -29,6 +28,7 @@ from .ibox import Ibox
 from .utils import ControlObject
 from .utils import load_xml_description
 from .utils import title_for
+from .utils import workerfunction
 from .link_parser import is_io_control
 from .link_parser import parse_link
 
@@ -37,6 +37,10 @@ from .link_parser import parse_link
 logging.basicConfig(format="%(message)s", level=logging.INFO)
 multiprocessing.log_to_stderr(logging.CRITICAL)
 logger = logging.getLogger(__name__)
+
+
+FLAG_ALL_DONE = b"WORK_FINISHED"
+FLAG_WORKER_FINISHED_PROCESSING = b"WORKER_FINISHED_PROCESSING"
 
 
 class Pbox(object):
@@ -70,6 +74,7 @@ class Pbox(object):
         self.inputs = ControlObject()
         self.outputs = ControlObject()
         self.active = True
+        self.workers = []
 
         # Create the bbox name
         self.id = module_name + "." + title_for(xmlfile_name.split(".")[0])
@@ -80,8 +85,14 @@ class Pbox(object):
         # Create the input and output controls
         self._create_pipeline()
 
-    def __call__(self, cpus=1, timer=1):
-        """ Execute the AutoProcess class.
+    @workerfunction
+    def __call__(self, cpus=1):
+        """ Execute a pbox.
+
+        Parameters
+        ----------
+        cpus: int (optional, default 1)
+            the number of cpus to use.
         """
         # Information
         logger.info("Using 'casper' version '{0}'.".format(casper.__version__))
@@ -102,110 +113,114 @@ class Pbox(object):
         if max(cpus, nb_cpus) == cpus:
             cpus = nb_cpus
 
-        # The worker function of a bbox, invoked in a Process.
-        def bbox_worker(bbox, workers_returncode):
-            box_name = multiprocessing.current_process().name
-            bbox_returncode = bbox(box_name)
-            workers_returncode.put(bbox_returncode)
-            workers_returncode
+        # The worker function of a bbox, invoked in a Process
+        def bbox_worker(workers_bbox, workers_returncode):
+            """ The worker.
+
+            Parameters
+            ----------
+            workers_bbox, workers_returncode: multiprocessing.Queue
+                the input and output queues.
+            """
+            while True:
+                inputs = workers_bbox.get()
+                if inputs == FLAG_ALL_DONE:
+                    workers_returncode.put(FLAG_WORKER_FINISHED_PROCESSING)
+                    break
+                process_name, box_funcdesc, bbox_inputs = inputs
+                bbox = Bbox(box_funcdesc)
+                for control_name, value in bbox_inputs.items():
+                    setattr(bbox.inputs, control_name, value)
+                bbox_returncode = bbox(process_name)
+                workers_returncode.put(bbox_returncode)
+
+        # Create the workers
+        workers_bbox = multiprocessing.Queue()
+        workers_returncode = multiprocessing.Queue()
+        for index in range(cpus):
+            process = multiprocessing.Process(
+                target=bbox_worker, args=(workers_bbox, workers_returncode))
+            process.deamon = True
+            process.start()
+            self.workers.append(process)
 
         # Execute the boxes respecting the graph order
         # Use a FIFO strategy to deal with multiple boxes
         iter_map = {}
-        self._update_graph(exec_graph, iter_map)
+        box_map = {}
+        self._update_graph(exec_graph, iter_map, box_map)
         toexec_box_names = self._available_boxes(exec_graph)
-        exec_queue = []
-        global_counter = 1
-        workers_returncode = multiprocessing.Queue()
-        wave_boxes = {}
+        inexec_box_names = {}
         returncode = {}
-        while toexec_box_names != [] or exec_queue != []:
+        global_counter = 1
+        workers_finished = 0
+        while True:
 
-            # Check which deamons are still alive and clean others
-            # Update also the iterative mapping queue
-            to_remove_indices = []
-            process_exitcodes = {}
-            for index, process in enumerate(exec_queue):
-                if not process.is_alive():
-                    (identifier, box_name, box_exec_name,
-                     box_iter_name, iteration) = Pbox.split_name(process.name)
-                    if box_iter_name in iter_map:
-                        position = iter_map[box_iter_name].index(box_name)
-                        iter_map[box_iter_name].pop(position)
-                    to_remove_indices.append(index)
-                    process.join()
-                    process_exitcodes[process.name] = process.exitcode
+            # Add nnil boxes to the input queue
+            if toexec_box_names is not None:
+                for box_name in toexec_box_names:
+                    process_name = "{0}-{1}".format(global_counter, box_name)
+                    inexec_box_names[box_name] = process_name
+                    box = exec_graph.find_node(box_name).meta
+                    global_counter += 1
+                    box_inputs = {}
+                    for control_name in box.inputs.controls:
+                        box_inputs[control_name] = getattr(
+                            box.inputs, control_name).value
+                    workers_bbox.put((process_name, box.funcdesc, box_inputs))
 
-            for index in reversed(to_remove_indices):
-                process = exec_queue.pop(index)
-
-            # Update execution list
-            if len(to_remove_indices) > 0:
-
-                # Collect the boxes returncodes
-                wave_returncode = {}
-                for index in range(workers_returncode.qsize()):
-                    wave_returncode.update(workers_returncode.get_nowait())
-                for process_name, exitcode in process_exitcodes.items():
-                    wave_returncode[process_name]["exitcode"] = exitcode
-                returncode.update(wave_returncode)
-
-                # Update the called boxes outputs and the graph
-                for process_item in sorted(wave_returncode.items()):
-                    process_name, process_returncode = process_item
-                    (identifier, box_name, box_exec_name,
-                     box_iter_name, iteration) = Pbox.split_name(process_name)
-                    if box_iter_name is not None:
-                        ibox = exec_graph.find_node(box_iter_name).meta
-                    box = wave_boxes.pop(box_name)
-                    exec_graph.remove_node(box_name)
-                    for name, value in process_returncode["outputs"].items():
-                        if box_iter_name is not None:
-                            ibox.update_iteroutputs(name, value, iteration)
-                        setattr(box.outputs, name, value)
-
-                    # Information
-                    for key, value in process_returncode.items():
-                        logger.info("{0}.{1} = {2}".format(
-                            process_name, key, value))
-                    logger.info("-" * 10)
-
-                # Destroy executed iterative boxes
-                for box_name, item in iter_map.items():
-                    if item == []:
-                        iter_map.pop(box_name)
-                        exec_graph.remove_node(box_name)
-
-                # Update nnil boxes list
-                self._update_graph(exec_graph, iter_map)
-                new_toexec_box_names = set(self._available_boxes(exec_graph))
-                toexec_box_names.extend(
-                    new_toexec_box_names.difference(toexec_box_names))
-
-            # Execute deamon processes
-            for index in range(cpus):
-
-                # Check if we have reached the maximum capacitites
-                if len(exec_queue) == cpus or toexec_box_names == []:
+            # Collect the box returncodes
+            wave_returncode = workers_returncode.get()
+            if wave_returncode == FLAG_WORKER_FINISHED_PROCESSING:
+                workers_finished += 1
+                if workers_finished == cpus:
                     break
+                continue
+            returncode.update(wave_returncode)
 
-                # Get a box to be processed
-                box_name = toexec_box_names.pop(0)
+            # Update the called box outputs and the graph
+            process_name = wave_returncode.keys()[0]
+            (identifier, box_name, box_exec_name,
+             box_iter_name, iteration) = Pbox.split_name(process_name)
+            if box_iter_name is not None:
+                ibox = exec_graph.find_node(box_iter_name).meta
+            box = exec_graph.find_node(box_name).meta
+            exec_graph.remove_node(box_name)
+            for name, value in wave_returncode[process_name][
+                    "outputs"].items():
+                setattr(box.outputs, name, value)
 
-                # Execute the box as a deamon process
-                process_name = "{0}-{1}".format(global_counter, box_name)
-                box = exec_graph.find_node(box_name).meta
-                wave_boxes[box_name] = box
-                process = multiprocessing.Process(
-                    name=process_name, target=bbox_worker,
-                    args=(box, workers_returncode))
-                process.deamon = True
-                process.start()
-                exec_queue.append(process)
-                global_counter += 1
+            # Update the iterative mapping, update the graph and ibox
+            # if an iterative job is done
+            if box_iter_name in iter_map:
+                position = iter_map[box_iter_name].index(box_name)
+                iter_map[box_iter_name].pop(position)
+                if len(iter_map[box_iter_name]) == 0:
+                    ibox = exec_graph.find_node(box_iter_name).meta
+                    ibox.update_iteroutputs(box_map.pop(box_iter_name))
+                    iter_map.pop(box_iter_name)
+                    exec_graph.remove_node(box_iter_name)
 
-            # Use a delay
-            time.sleep(timer)
+            # Information
+            for key, value in wave_returncode[process_name].items():
+                logger.info("{0}.{1} = {2}".format(
+                    process_name, key, value))
+            logger.info("-" * 10)
+
+            # Update nnil boxes list
+            if toexec_box_names is not None:
+                self._update_graph(exec_graph, iter_map, box_map)
+                new_toexec_box_names = set(self._available_boxes(exec_graph))
+                inexec_box_names.pop(box_name)
+                toexec_box_names = new_toexec_box_names - set(inexec_box_names)
+
+                # Stop iteration: no more job
+                if len(exec_graph._nodes) == 0:
+                    toexec_box_names = None
+
+                    # Add poison pills to stop the remote workers
+                    for index in range(cpus):
+                        workers_bbox.put(FLAG_ALL_DONE)
 
     ###########################################################################
     # Public Members
@@ -262,7 +277,7 @@ class Pbox(object):
         return sorted([node.name for node in graph.available_nodes()
                       if not isinstance(node.meta, Ibox)])
 
-    def _update_graph(self, graph, iter_map, prefix=""):
+    def _update_graph(self, graph, iter_map, box_map, prefix=""):
         """ Dynamically update the graph representtion of the pipeline.
 
         Update the 'iter_map' dictionary with the built iterative
@@ -277,6 +292,9 @@ class Pbox(object):
         iter_map: dict
             the dictionary containing a mapping between all the ibox names
             and executed box names and associated ibox.
+        box_map: dict
+            the dictionary containing a mapping between all the ibox names
+            and associated bbox or pbox.
         prefix: str (optional, default '')
             a prefix for the box names.
         """
@@ -295,10 +313,17 @@ class Pbox(object):
 
                 # Update the input graph and the execution list
                 iter_map[box_name] = []
-                for itername, itergraph in itergraphs.items():
+                iterboxes = []
+                for itername, iteritem in itergraphs.items():
+                    itergraph, iterbox = iteritem
                     graph.add_graph(itergraph)
+                    _, iteration = itername.split(Ibox.itersep)
+                    iteration = int(iteration)
+                    iterboxes.append((iteration, iterbox))
                     iter_map[box_name].extend(
                         [node.name for node in itergraph._nodes.values()])
+                iterboxes = sorted(iterboxes, key=lambda item: item[0])
+                box_map[box_name] = [item[1] for item in iterboxes]
 
     def _create_graph(self, box, prefix="", flatten=True, add_io=False,
                       filter_inactive=False):

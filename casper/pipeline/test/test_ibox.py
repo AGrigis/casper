@@ -104,7 +104,7 @@ class TestIBox(unittest.TestCase):
 
         # Test execution
         self.mypbox.inputs.inp = "str"
-        self.mypbox(timer=0.001)
+        self.mypbox()
         self.assertEqual(self.mypbox.outputs.outp.value, "str0str1")
 
         if 0:

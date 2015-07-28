@@ -43,6 +43,7 @@ class Bbox(object):
         func = self._load(funcdesc)
 
         # Define class parameters
+        self.funcdesc = funcdesc
         self._func = func
         self.inputs = ControlObject()
         self.outputs = ControlObject()

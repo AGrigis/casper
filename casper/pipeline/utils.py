@@ -14,9 +14,6 @@ import os
 import xml.dom.minidom
 from casper.lib.base.xmltodict import xmltodict
 
-# Casper import
-from casper.lib.controls import Base
-
 
 class ControlObject(object):
     """ Dummy class for controls.
@@ -57,9 +54,6 @@ class ControlObject(object):
         # Store attribute names
         if hasattr(self, "controls") and name not in self.controls:
             self.controls.append(name)
-        elif isinstance(value, Base):
-            raise ValueError(
-                "A control named '{0}' is already registered.".format(name))
 
         # Control special case
         if hasattr(self, name):
@@ -153,3 +147,29 @@ def load_xml_description(xmlfile):
         desc = xmltodict(open_description.read())
 
     return desc
+
+
+def workerfunction(func):
+    """ Function that can be used as a decorator for pbox call function.
+
+    Insure that all the workers terminate properly.
+
+    Parameters
+    ----------
+    func: @func (mandatory)
+        a function that will be decorated.
+
+    Returns
+    -------
+    decorated_func: @func
+        the input function encapsulated in a try except.
+    """
+    def decorated_func(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except:
+            for process in self.workers:
+                process.terminate()
+                process.join()
+            raise
+    return decorated_func

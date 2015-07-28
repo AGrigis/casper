@@ -1,5 +1,12 @@
+[run]
+source = casper
+
 [report]
-omit =  
+omit =
+    *__init__*
+    */test/*
+    casper/demo/*
+    casper/view/*
     */python?.?/*
     */site-packages/nose/*
-    *__init__*
+
