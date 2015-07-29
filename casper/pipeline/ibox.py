@@ -14,7 +14,6 @@ import sys
 
 # Casper import
 from casper.lib.controls import controls
-from .bbox import Bbox
 from .utils import ControlObject
 from casper.lib.base import Graph
 from casper.lib.base import GraphNode
@@ -26,29 +25,25 @@ class Ibox(object):
     iterprefix = "iter"
     itersep = "&"
 
-    def __init__(self, desc, iterinputs=None, iteroutputs=None):
+    def __init__(self, box, iterinputs=None, iteroutputs=None):
         """ Initialize the Ibox class.
 
         Parameters
         ----------
         desc: string (mandatory)
-            a python function path relative to the module we want to decorate
-            in a building box or the path to a xml pipeline description
-            (relative to the module).
+            a processing box.
+        iterinputs: list of str (optional, default None)
+            the list of iterative input controls.
+        iteroutputs: list of str (optional, default None)
+            the list of iterative output controls.
         """
-        # Avoid cycling import
-        from .pbox import Pbox
-
         # Define class parameters
         self.iterinputs = iterinputs or []
         self.iteroutputs = iteroutputs or []
         self.ispbox = False
-        self.desc = desc
-        if self.desc.endswith(".xml"):
+        self.iterbox = box
+        if self.iterbox.__class__.__name__ == "Pbox":
             self.ispbox = True
-            self.iterbox = Pbox(self.desc)
-        else:
-            self.iterbox = Bbox(self.desc)
         self.inputs = ControlObject()
         self.outputs = ControlObject()
         self.active = True
@@ -162,11 +157,7 @@ class Ibox(object):
                 # python 2.7
                 python_version = sys.version_info
                 if python_version[:2] <= (2, 6):
-                    from .pbox import Pbox
-                    if self.desc.endswith(".xml"):
-                        iterbox = Pbox(self.desc)
-                    else:
-                        iterbox = Bbox(self.desc)
+                    iterbox = type(self.iterbox)(self.iterbox.desc)
                 else:
                     iterbox = copy.deepcopy(self.iterbox)
                 for control_name in self.iterinputs:
@@ -176,14 +167,14 @@ class Ibox(object):
                             itercontrol.value[iteritem])
 
                 node_name = "{0}{1}{2}".format(prefix, self.itersep, iteritem)
-                # Iterate on a bbox
-                if isinstance(self.iterbox, Bbox):
-                    itergraph = Graph()
-                    itergraph.add_node(GraphNode(node_name, iterbox))
                 # Iterate on a pbox
-                else:
+                if self.ispbox:
                     itergraph, _, _ = self.iterbox._create_graph(
                         iterbox, prefix=node_name + ".", filter_inactive=True)
+                # Iterate on a bbox
+                else:
+                    itergraph = Graph()
+                    itergraph.add_node(GraphNode(node_name, iterbox))
                 itergraphs[node_name] = (itergraph, iterbox)
 
         return itergraphs

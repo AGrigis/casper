@@ -13,6 +13,7 @@ import os
 import numpy
 
 # Casper import
+from casper.pipeline import Bbox
 from casper.pipeline import Pbox
 from casper.pipeline import Ibox
 from casper.lib.controls import List
@@ -42,13 +43,15 @@ class TestIBox(unittest.TestCase):
         # Return to new line
         print
 
+        # Create a bbox
+        box = Bbox(self.myfuncdesc)
+
         # Test raises
-        self.assertRaises(ValueError, Ibox, self.mycloth, iterinputs=["bad"])
-        self.assertRaises(ValueError, Ibox, self.mycloth, iteroutputs=["bad"])
+        self.assertRaises(ValueError, Ibox, box, iterinputs=["bad"])
+        self.assertRaises(ValueError, Ibox, box, iteroutputs=["bad"])
 
         # Create the box
-        self.myibox = Ibox(
-            self.myfuncdesc, iterinputs=["fname"], iteroutputs=["string"])
+        self.myibox = Ibox(box, iterinputs=["fname"], iteroutputs=["string"])
         iterprefix = self.myibox.iterprefix
 
         # Test parameters
