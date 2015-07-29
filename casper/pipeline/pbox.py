@@ -67,6 +67,7 @@ class Pbox(object):
             to the module.
         """
         # Define class parameters
+        self.desc = xmldesc
         self._xmlfile, module_name, xmlfile_name = self._load(xmldesc)
         self._boxes = {}
         self._links = []
@@ -127,11 +128,15 @@ class Pbox(object):
                 if inputs == FLAG_ALL_DONE:
                     workers_returncode.put(FLAG_WORKER_FINISHED_PROCESSING)
                     break
-                process_name, box_funcdesc, bbox_inputs = inputs
-                bbox = Bbox(box_funcdesc)
-                for control_name, value in bbox_inputs.items():
-                    setattr(bbox.inputs, control_name, value)
-                bbox_returncode = bbox(process_name)
+                try:
+                    process_name, box_funcdesc, bbox_inputs = inputs
+                    bbox = Bbox(box_funcdesc)
+                    for control_name, value in bbox_inputs.items():
+                        setattr(bbox.inputs, control_name, value)
+                    bbox_returncode = bbox(process_name)
+                    bbox_returncode[process_name]["exitcode"] = 0
+                except:
+                    bbox_returncode[process_name] = {"exitcode": 1}
                 workers_returncode.put(bbox_returncode)
 
         # Create the workers
@@ -167,7 +172,7 @@ class Pbox(object):
                     for control_name in box.inputs.controls:
                         box_inputs[control_name] = getattr(
                             box.inputs, control_name).value
-                    workers_bbox.put((process_name, box.funcdesc, box_inputs))
+                    workers_bbox.put((process_name, box.desc, box_inputs))
 
             # Collect the box returncodes
             wave_returncode = workers_returncode.get()
@@ -179,7 +184,7 @@ class Pbox(object):
             returncode.update(wave_returncode)
 
             # Update the called box outputs and the graph
-            process_name = wave_returncode.keys()[0]
+            process_name = list(wave_returncode.keys())[0]
             (identifier, box_name, box_exec_name,
              box_iter_name, iteration) = Pbox.split_name(process_name)
             if box_iter_name is not None:
@@ -601,15 +606,15 @@ class Pbox(object):
         box_module = boxdesc[self.unit_attributes[1]][0]
         iterinputs = boxdesc.get(self.unit_attributes[3], [])
         iteroutputs = boxdesc.get(self.unit_attributes[4], [])
-        if iterinputs != [] or iteroutputs != []:
-            iterinputs = [item["name"] for item in iterinputs]
-            iteroutputs = [item["name"] for item in iteroutputs]
-            box = Ibox(box_module, iterinputs, iteroutputs)
-        elif box_module.endswith(".xml"):
+        if box_module.endswith(".xml"):
             box = Pbox(box_module)
         else:
             box = Bbox(box_module)
             box.update_control_names(box_name)
+        if iterinputs != [] or iteroutputs != []:
+            iterinputs = [item["name"] for item in iterinputs]
+            iteroutputs = [item["name"] for item in iteroutputs]
+            box = Ibox(box, iterinputs, iteroutputs)
         self._boxes[box_name] = box
 
         # Set the new box default parameters
