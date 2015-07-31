@@ -36,6 +36,11 @@ class Base(Observable):
         tells if the control is iterable.
     `inner`: bool
         tells if the control is an inner control.
+    `copy`: bool
+        tells if the control value is changed during the processing and thus
+        mist be copied if some smart-caching strategies are used.
+    `nohash`: bool
+        tells if the control must appear in the finger print of the function.
     """
     def __init__(self, value=None, *args, **kwargs):
         """ Initialize the 'Base' class.
@@ -54,6 +59,8 @@ class Base(Observable):
         self.name = ""
         self.iterable = False
         self.inner = False
+        self.copy = False
+        self.nohash = False
         self.kwargs = kwargs
 
         # Store extra parameters

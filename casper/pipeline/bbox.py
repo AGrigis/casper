@@ -13,6 +13,7 @@ import os
 import sys
 import inspect
 import timeit
+import copy
 try:
     import importlib
 except:
@@ -73,7 +74,7 @@ class Bbox(object):
         # Create the input and output controls
         self._set_controls()
 
-    def __call__(self, box_name=None):
+    def __call__(self, box_name=None, *args, **kwargs):
         """ Execute the Bbox class.
 
         Parameters
@@ -100,9 +101,12 @@ class Bbox(object):
         # COMPATIBILITY: dict in python 2 becomes structure in pyton 3
         python_version = sys.version_info
         if python_version[0] < 3:
-            environ = os.environ
+            environ = copy.deepcopy(os.environ.__dict__)
         else:
-            environ = os.environ._data
+            environ = copy.deepcopy(os.environ._data)
+            for key in environ:
+                value = environ.pop(key)
+                environ[key.decode("utf-8")] = value.decode("utf-8")
         returncode = dict([
             (box_name, dict([
                 ("inputs", {}), ("outputs", {}), ("stdout", None),

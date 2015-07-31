@@ -58,7 +58,7 @@ class TestGraph(unittest.TestCase):
         """ Method to test the static node sort.
         """
         static_sort = [node[0] for node in self.graph.topological_sort()]
-        self.assertEqual(static_sort, self.sorted_objects)
+        self.assertTrue(set(static_sort).issubset(self.sorted_objects))
 
     def test_dynamic_sort(self):
         """ Method to test the dynamic node sort.

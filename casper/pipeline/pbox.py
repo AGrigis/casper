@@ -115,14 +115,20 @@ class Pbox(object):
             cpus = nb_cpus
 
         # The worker function of a bbox, invoked in a Process
-        def bbox_worker(workers_bbox, workers_returncode):
+        def bbox_worker(workers_bbox, workers_returncode, cachedir=None):
             """ The worker.
 
             Parameters
             ----------
             workers_bbox, workers_returncode: multiprocessing.Queue
                 the input and output queues.
+            cachedir: string
+                the directory in which the smart-caching will work.
             """
+            from casper.lib.cache import Memory
+            import traceback
+
+            mem = Memory(cachedir)
             while True:
                 inputs = workers_bbox.get()
                 if inputs == FLAG_ALL_DONE:
@@ -130,13 +136,17 @@ class Pbox(object):
                     break
                 try:
                     process_name, box_funcdesc, bbox_inputs = inputs
-                    bbox = Bbox(box_funcdesc)
+                    bbox = mem.cache(Bbox(box_funcdesc))
                     for control_name, value in bbox_inputs.items():
                         setattr(bbox.inputs, control_name, value)
                     bbox_returncode = bbox(process_name)
                     bbox_returncode[process_name]["exitcode"] = 0
                 except:
-                    bbox_returncode[process_name] = {"exitcode": 1}
+                    bbox_returncode = {process_name: {}}
+                    bbox_returncode[process_name]["inputs"] = {}
+                    bbox_returncode[process_name]["outputs"] = {}
+                    bbox_returncode[process_name]["exitcode"] = (
+                        "1 - {0}'".format(traceback.format_exc()))
                 workers_returncode.put(bbox_returncode)
 
         # Create the workers

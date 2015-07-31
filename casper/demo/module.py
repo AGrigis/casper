@@ -19,7 +19,6 @@ def a_function_to_wrap(fname, directory="dsfds"):
     </unit>
     """
     string = "-".join([repr(fname), repr(directory)])
-    fname = "toto"
     return string
 
 
